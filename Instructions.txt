@@ -1,0 +1,5 @@
+1. Please unpack zipped file
+2. Please open R file (make sure that R file and www folder is on the same path otherwise you will face issue with images display)
+3. Please install all necessary libraries
+4. Please run the app
+5. In case of any doubts please refer to 'Guide' tab or contact us (you can find our mails in 'Contact' tab)

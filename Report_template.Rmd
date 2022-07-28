@@ -1,0 +1,253 @@
+---
+title: "Henkilo Report"
+output:     
+    prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+params: 
+    data: null
+    exchange: null
+    plots: null
+    anonymous: null
+    scenario: null
+    statss: null
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+library(shiny)
+library(knitr)
+```
+
+
+```{r params, echo=FALSE, message=FALSE, warning=FALSE}
+# The `params` object is available in the document.
+employee_data<-params$data
+employee_data$date_of_birth <- as.Date(as.numeric(employee_data$date_of_birth),origin = "1899-12-30")
+exchange_rates <- params$exchange
+plots <- params$plots
+anonymous <- params$anonymous
+scenario <- params$scenario
+statss <- params$statss
+```
+
+# Employees info
+
+## List of employees
+
+```{r base, echo=FALSE, message=TRUE, warning=FALSE, results='asis'}
+
+if(anonymous != TRUE){
+  kable(employee_data[,c(2:4,6:10)])
+}
+if(anonymous == TRUE){
+  x<-employee_data[,c(2:3)]
+  x$name <- substr(x$name,1,1)
+  x$surname <- substr(x$surname,1,1)
+  kable(x)
+}
+
+```
+
+## Salaries
+
+```{r salaries, echo=FALSE, message=TRUE, warning=FALSE, results='asis'}
+
+if(anonymous != TRUE){
+  kable(employee_data[,c(2,3,5,1,16)])
+}
+if(anonymous == TRUE){
+}
+
+```
+
+# Statistics
+
+```{r plots_stats1}
+
+if(statss == TRUE){
+   ggplot(employee_data, aes(x=employee_data$seniority_level, y=frequency(employee_data$seniority_level))) + 
+        geom_bar(stat="identity", width=.5, fill="#2C346B") + 
+        labs(subtitle="Frequency by Seniority Level") + 
+        theme(axis.text.x = element_text(size = 10, angle = 70, vjust = 0.5, hjust=0.5),
+              axis.title.x = element_blank(),
+              axis.title.y = element_blank())
+}
+```
+
+```{r plots_stats2}
+
+if(statss == TRUE){
+   ggplot(employee_data, aes(x=employee_data$position, y=frequency(employee_data$position))) + 
+        geom_bar(stat="identity", width=.5, fill="#2C346B") + 
+        labs(subtitle="Frequency by Position") + 
+        theme(axis.text.x = element_text(size = 10, angle = 70, vjust = 0.5, hjust=0.5),
+              axis.title.x = element_blank(),
+              axis.title.y = element_blank())
+}
+```
+
+```{r plots_stats3}
+
+if(statss == TRUE){
+   ggplot(employee_data, aes(x=employee_data$agreement_type, y=frequency(employee_data$agreement_type))) + 
+        geom_bar(stat="identity", width=.5, fill="#2C346B") + 
+        labs(subtitle="Frequency by Agreement type") + 
+        theme(axis.text.x = element_text(size = 10, angle = 70, vjust = 0.5, hjust=0.5),
+              axis.title.x = element_blank(),
+              axis.title.y = element_blank())
+}
+```
+
+```{r plots_stats4}
+
+if(statss == TRUE){
+     ggplot(employee_data, aes(x=employee_data$team, y=frequency(employee_data$team))) + 
+        geom_bar(stat="identity", width=.5, fill="#2C346B") + 
+        labs(subtitle="Frequency by Team") + 
+        theme(axis.text.x = element_text(size = 10, angle = 70, vjust = 0.5, hjust=0.5),
+              axis.title.x = element_blank(),
+              axis.title.y = element_blank())
+}
+```
+
+# Exchange rates
+
+```{r ex, echo=FALSE, message=FALSE, warning=FALSE, paged.print=TRUE, results='asis'}
+kable(exchange_rates[,c(3,2)])
+```
+
+
+```{r plots, echo=FALSE, message=FALSE, warning=FALSE}
+if(plots == TRUE){
+   df <- employee_data
+    scenario <- scenario
+    df$date_of_birth <- as.Date(df$date_of_birth,origin = "1899-12-30")
+    df$date_of_employment <- as.Date(df$date_of_employment,origin = "1899-12-30")
+    df$experience <- as.numeric(df$experience)
+    df$hours_of_training<- as.numeric(df$hours_of_training)
+    df$salary<- as.numeric(df$salaryPLN)
+    if(scenario=='Genovia'){
+      salary_after_tax_1 <- NA
+      salary_after_tax_1<-ifelse(df$salary <1000, df$salary * 0.95,
+                                 ifelse(df$salary >= 1000 & df$salary <= 7000,df$salary * 0.75, df$salary * 0.6))
+      today = as.Date(today())
+      df$age <- NA
+      df$age <-trunc((as.Date(df$date_of_birth) %--% today) / years(1))
+      salary_after_tax_2 <-NA
+      salary_after_tax_2<-ifelse(df$age <25, df$salary * 0.95,
+                                 ifelse(df$age > 60,df$salary * 0.90, df$salary * 0.75 ))
+      salary_after_tax = c()
+      for (row in 1:nrow(df)){
+        x <- NA
+        x <- ifelse(df$agreement_type[row] == "B2B", df$salary[row]* 0.85, min(salary_after_tax_1[row], salary_after_tax_2[row]))
+        salary_after_tax <- c(salary_after_tax,x)
+      }
+      df$salary_after_tax <- salary_after_tax
+    }
+    if(scenario=='Panem'){
+      salary_after_tax_1 <- NA
+      df$salary_after_tax_1<-ifelse(df$salary <1000, df$salary * 0.75,
+                                           ifelse(df$salary >= 1000 & df$salary <= 5000,df$salary * 0.5, df$salary * 0.25 ))
+      today = as.Date(today())
+      df$length_of_employment <-as.numeric(trunc((as.Date(df$date_of_employment) %--% today) / years(1)))
+      df$salary_after_tax_2<-ifelse(df$length_of_employment <3, 
+                                           df$salary_after_tax_1,
+                                           (df$salary_after_tax_1/df$salary + (df$length_of_employment/100))*df$salary)
+      
+      df$salary_after_tax <- df$salary_after_tax_2
+      employer_tax <- ifelse((length(which(df$sex == "M"))/length(which(df$sex == "F")))> 0.6, 0.05, 0)
+    }
+    if(scenario=='No tax'){
+      df$salary_after_tax <- df$salary
+    }
+
+
+    if(scenario=='Genovia'){
+      employer_tax <- ifelse(mean(df$hours_of_training)> 50, 0.07, 0.1)
+    }
+    if(scenario=='Panem'){
+      employer_tax <- ifelse((length(which(df$sex == "M"))/length(which(df$sex == "F")))> 0.6, 0.05, 0)
+    }
+    if(scenario=='No tax'){
+      employer_tax = 0
+    }
+}
+```
+
+# Taxes plots
+
+```{r first_plot, echo=FALSE, message=FALSE, warning=FALSE}
+if(plots == TRUE){
+      after_tax_mean<- aggregate(df$salary_after_tax, list(df$position), FUN=mean)
+      ggplot(after_tax_mean, aes(x=reorder(after_tax_mean$Group.1, -after_tax_mean$x), y=after_tax_mean$x)) + 
+        geom_bar(stat="identity", width=.5, fill="#2C346B") + 
+        labs(subtitle="Average salary after tax deductions by Position") + 
+        theme(axis.text.x = element_text(size = 10, angle = 70, vjust = 0.5, hjust=0.5),
+              axis.title.x = element_blank(),
+              axis.title.y = element_blank())
+}
+```
+
+```{r second_plot, echo=FALSE, message=FALSE, warning=FALSE}
+    if(plots == TRUE){
+            after_tax_mean_team<- aggregate(df$salary_after_tax, list(df$team), FUN=mean)
+      ggplot(after_tax_mean_team, aes(x=reorder(after_tax_mean_team$Group.1, -after_tax_mean_team$x), y=after_tax_mean_team$x)) + 
+        geom_bar(stat="identity", width=.5, fill="#2C346B") + 
+        labs(subtitle="Average salary after tax deductions by Team") + 
+        theme(axis.text.x = element_text(size = 10, angle = 70, vjust = 0.5, hjust=0.5),
+              axis.title.x = element_blank(),
+              axis.title.y = element_blank())
+    }
+```
+
+```{r third_plot, echo=FALSE, message=FALSE, warning=FALSE}
+      if(plots == TRUE){
+            after_tax_mean_sen<- aggregate(df$salary_after_tax, list(df$seniority_level), FUN=mean)
+      ggplot(after_tax_mean_sen, aes(x=reorder(after_tax_mean_sen$Group.1, -after_tax_mean_sen$x), y=after_tax_mean_sen$x)) + 
+        geom_bar(stat="identity", width=.5, fill="#2C346B") + 
+        labs(subtitle="Average salary after tax deductions by Seniority Level") + 
+        theme(axis.text.x = element_text(size = 10, angle = 70, vjust = 0.5, hjust=0.5),
+              axis.title.x = element_blank(),
+              axis.title.y = element_blank())
+      }
+```
+
+```{r fourth_plot, echo=FALSE, message=FALSE, warning=FALSE}
+if(plots == TRUE){
+  et_function<- function(){
+    if(scenario=='Genovia'){
+      employer_tax <- ifelse(mean(df$hours_of_training)> 50, 0.07, 0.1)
+    }
+    if(scenario=='Panem'){
+      employer_tax <- ifelse((length(which(df$sex == "M"))/length(which(df$sex == "F")))> 0.6, 0.05, 0)
+    }
+    if(scenario=='No tax'){
+      employer_tax = 0
+    }
+    return(employer_tax)
+  }
+  
+  et <- et_function()
+      
+            df_pie <- data.frame(
+        group = c("Profit", "Tax"),
+        value = c(1-et, et)
+      )
+      ggplot(df_pie, aes(x="", y=value, fill=group)) +
+        geom_bar(stat="identity", width=1) +
+        coord_polar("y", start=0) + 
+        scale_fill_manual(values=c("#2C346B", "#FFF559"))+
+        theme(axis.text.x = element_blank(),
+              axis.text.y = element_blank(),
+              axis.title.x = element_blank(),
+              axis.title.y = element_blank())
+}
+```
+
+
